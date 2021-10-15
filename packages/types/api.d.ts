@@ -8,11 +8,17 @@ export declare const VERSION: string
  * Of `CstParser` and `EmbeddedActionsParser`
  */
 declare abstract class BaseParser {
+  errors: IRecognitionException[]
   /**
-   * This must be called at the end of a Parser constructor.
-   * See: http://chevrotain.io/docs/tutorial/step2_parsing.html#under-the-hood
+   * Flag indicating the Parser is at the recording phase.
+   * Can be used to implement methods similar to {@link BaseParser.ACTION}
+   * Or any other logic to requires knowledge of the recording phase.
+   * See:
+   *   - https://chevrotain.io/docs/guide/internals.html#grammar-recording
+   * to learn more on the recording phase and how Chevrotain works.
    */
-  protected performSelfAnalysis(): void
+  RECORDING_PHASE: boolean
+  input: IToken[]
 
   /**
    * It is recommended to reuse the same Parser instance
@@ -25,18 +31,6 @@ declare abstract class BaseParser {
    */
   constructor(tokenVocabulary: TokenVocabulary, config?: IParserConfig)
 
-  errors: IRecognitionException[]
-
-  /**
-   * Flag indicating the Parser is at the recording phase.
-   * Can be used to implement methods similar to {@link BaseParser.ACTION}
-   * Or any other logic to requires knowledge of the recording phase.
-   * See:
-   *   - https://chevrotain.io/docs/guide/internals.html#grammar-recording
-   * to learn more on the recording phase and how Chevrotain works.
-   */
-  RECORDING_PHASE: boolean
-
   /**
    * Resets the parser state, should be overridden for custom parsers which "carry" additional state.
    * When overriding, remember to also invoke the super implementation!
@@ -44,11 +38,11 @@ declare abstract class BaseParser {
   reset(): void
 
   getBaseCstVisitorConstructor(): {
-    new (...args: any[]): ICstVisitor<any, any>
+    new(...args: any[]): ICstVisitor<any, any>
   }
 
   getBaseCstVisitorConstructorWithDefaults(): {
-    new (...args: any[]): ICstVisitor<any, any>
+    new(...args: any[]): ICstVisitor<any, any>
   }
 
   getGAstProductions(): Record<string, Rule>
@@ -63,6 +57,12 @@ declare abstract class BaseParser {
     startRuleName: string,
     precedingInput: IToken[]
   ): ISyntacticContentAssistPath[]
+
+  /**
+   * This must be called at the end of a Parser constructor.
+   * See: http://chevrotain.io/docs/tutorial/step2_parsing.html#under-the-hood
+   */
+  protected performSelfAnalysis(): void
 
   /**
    * @param grammarRule - The rule to try and parse in backtracking mode.
@@ -122,6 +122,7 @@ declare abstract class BaseParser {
    * @see OR
    */
   protected or(idx: number, altsOrOpts: IOrAlt<any>[] | OrMethodOpts<any>): any
+
   protected or<T>(idx: number, altsOrOpts: IOrAlt<T>[] | OrMethodOpts<T>): T
 
   /**
@@ -405,6 +406,7 @@ declare abstract class BaseParser {
    * @returns The result of invoking the chosen alternative.
    */
   protected OR<T>(altsOrOpts: IOrAlt<T>[] | OrMethodOpts<T>): T
+
   protected OR(altsOrOpts: IOrAlt<any>[] | OrMethodOpts<any>): any
 
   /**
@@ -412,6 +414,7 @@ declare abstract class BaseParser {
    * @hidden
    */
   protected OR1<T>(altsOrOpts: IOrAlt<T>[] | OrMethodOpts<T>): T
+
   protected OR1(altsOrOpts: IOrAlt<any>[] | OrMethodOpts<any>): any
 
   /**
@@ -419,6 +422,7 @@ declare abstract class BaseParser {
    * @hidden
    */
   protected OR2<T>(altsOrOpts: IOrAlt<T>[] | OrMethodOpts<T>): T
+
   protected OR2(altsOrOpts: IOrAlt<any>[] | OrMethodOpts<any>): any
 
   /**
@@ -426,6 +430,7 @@ declare abstract class BaseParser {
    * @hidden
    */
   protected OR3<T>(altsOrOpts: IOrAlt<T>[] | OrMethodOpts<T>): T
+
   protected OR3(altsOrOpts: IOrAlt<any>[] | OrMethodOpts<any>): any
 
   /**
@@ -433,6 +438,7 @@ declare abstract class BaseParser {
    * @hidden
    */
   protected OR4<T>(altsOrOpts: IOrAlt<T>[] | OrMethodOpts<T>): T
+
   protected OR4(altsOrOpts: IOrAlt<any>[] | OrMethodOpts<any>): any
 
   /**
@@ -440,6 +446,7 @@ declare abstract class BaseParser {
    * @hidden
    */
   protected OR5<T>(altsOrOpts: IOrAlt<T>[] | OrMethodOpts<T>): T
+
   protected OR5(altsOrOpts: IOrAlt<any>[] | OrMethodOpts<any>): any
 
   /**
@@ -447,6 +454,7 @@ declare abstract class BaseParser {
    * @hidden
    */
   protected OR6<T>(altsOrOpts: IOrAlt<T>[] | OrMethodOpts<T>): T
+
   protected OR6(altsOrOpts: IOrAlt<any>[] | OrMethodOpts<any>): any
 
   /**
@@ -454,6 +462,7 @@ declare abstract class BaseParser {
    * @hidden
    */
   protected OR7<T>(altsOrOpts: IOrAlt<T>[] | OrMethodOpts<T>): T
+
   protected OR7(altsOrOpts: IOrAlt<any>[] | OrMethodOpts<any>): any
 
   /**
@@ -461,6 +470,7 @@ declare abstract class BaseParser {
    * @hidden
    */
   protected OR8<T>(altsOrOpts: IOrAlt<T>[] | OrMethodOpts<T>): T
+
   protected OR8(altsOrOpts: IOrAlt<any>[] | OrMethodOpts<any>): any
 
   /**
@@ -468,6 +478,7 @@ declare abstract class BaseParser {
    * @hidden
    */
   protected OR9<T>(altsOrOpts: IOrAlt<T>[] | OrMethodOpts<T>): T
+
   protected OR9(altsOrOpts: IOrAlt<any>[] | OrMethodOpts<any>): any
 
   /**
@@ -844,8 +855,6 @@ declare abstract class BaseParser {
     grammarPath: ITokenGrammarPath
   ): TokenType[]
 
-  input: IToken[]
-
   protected SKIP_TOKEN(): IToken
 
   /**
@@ -1021,9 +1030,14 @@ export declare class EmbeddedActionsParser extends BaseParser {
    */
   protected RULE<T>(
     name: string,
-    implementation: (...implArgs: any[]) => T,
+    implementation: () => T,
     config?: IRuleConfig<T>
-  ): (idxInCallingRule?: number, ...args: any[]) => T
+  ): (idxInCallingRule?: number) => T
+  protected RULE<ARGS extends unknown[], T>(
+    name: string,
+    implementation: (...implArgs: ARGS) => T,
+    config?: IRuleConfig<T>
+  ): (idxInCallingRule: number | undefined, args: ARGS) => T
 
   /**
    * Overrides a Grammar Rule
@@ -1048,6 +1062,11 @@ export declare class EmbeddedActionsParser extends BaseParser {
     ruleToCall: (idx: number) => T,
     options?: SubruleMethodOpts
   ): T
+  protected subrule<ARGS extends unknown[], T>(
+    idx: number,
+    ruleToCall: (idx: number, ...args: ARGS) => T,
+    options: SubruleMethodOpts & { ARGS: ARGS }
+  ): T
 
   /**
    * The Parsing DSL Method is used by one rule to call another.
@@ -1070,6 +1089,10 @@ export declare class EmbeddedActionsParser extends BaseParser {
     ruleToCall: (idx: number) => T,
     options?: SubruleMethodOpts
   ): T
+  protected SUBRULE<ARGS extends unknown[], T>(
+    ruleToCall: (idx: number, args: ARGS) => T,
+    options: SubruleMethodOpts & { ARGS: ARGS }
+  ): T
 
   /**
    * @see SUBRULE
@@ -1078,6 +1101,10 @@ export declare class EmbeddedActionsParser extends BaseParser {
   protected SUBRULE1<T>(
     ruleToCall: (idx: number) => T,
     options?: SubruleMethodOpts
+  ): T
+  protected SUBRULE1<ARGS extends unknown[], T>(
+    ruleToCall: (idx: number, args: ARGS) => T,
+    options: SubruleMethodOpts & { ARGS: ARGS }
   ): T
 
   /**
@@ -1088,6 +1115,10 @@ export declare class EmbeddedActionsParser extends BaseParser {
     ruleToCall: (idx: number) => T,
     options?: SubruleMethodOpts
   ): T
+  protected SUBRULE2<ARGS extends unknown[], T>(
+    ruleToCall: (idx: number, args: ARGS) => T,
+    options: SubruleMethodOpts & { ARGS: ARGS }
+  ): T
 
   /**
    * @see SUBRULE
@@ -1096,6 +1127,10 @@ export declare class EmbeddedActionsParser extends BaseParser {
   protected SUBRULE3<T>(
     ruleToCall: (idx: number) => T,
     options?: SubruleMethodOpts
+  ): T
+  protected SUBRULE3<ARGS extends unknown[], T>(
+    ruleToCall: (idx: number, args: ARGS) => T,
+    options: SubruleMethodOpts & { ARGS: ARGS }
   ): T
 
   /**
@@ -1106,6 +1141,10 @@ export declare class EmbeddedActionsParser extends BaseParser {
     ruleToCall: (idx: number) => T,
     options?: SubruleMethodOpts
   ): T
+  protected SUBRULE4<ARGS extends unknown[], T>(
+    ruleToCall: (idx: number, args: ARGS) => T,
+    options: SubruleMethodOpts & { ARGS: ARGS }
+  ): T
 
   /**
    * @see SUBRULE
@@ -1114,6 +1153,10 @@ export declare class EmbeddedActionsParser extends BaseParser {
   protected SUBRULE5<T>(
     ruleToCall: (idx: number) => T,
     options?: SubruleMethodOpts
+  ): T
+  protected SUBRULE5<ARGS extends unknown[], T>(
+    ruleToCall: (idx: number, args: ARGS) => T,
+    options: SubruleMethodOpts & { ARGS: ARGS }
   ): T
 
   /**
@@ -1124,6 +1167,10 @@ export declare class EmbeddedActionsParser extends BaseParser {
     ruleToCall: (idx: number) => T,
     options?: SubruleMethodOpts
   ): T
+  protected SUBRULE6<ARGS extends unknown[], T>(
+    ruleToCall: (idx: number, args: ARGS) => T,
+    options: SubruleMethodOpts & { ARGS: ARGS }
+  ): T
 
   /**
    * @see SUBRULE
@@ -1132,6 +1179,10 @@ export declare class EmbeddedActionsParser extends BaseParser {
   protected SUBRULE7<T>(
     ruleToCall: (idx: number) => T,
     options?: SubruleMethodOpts
+  ): T
+  protected SUBRULE7<ARGS extends unknown[], T>(
+    ruleToCall: (idx: number, args: ARGS) => T,
+    options: SubruleMethodOpts & { ARGS: ARGS }
   ): T
 
   /**
@@ -1142,6 +1193,10 @@ export declare class EmbeddedActionsParser extends BaseParser {
     ruleToCall: (idx: number) => T,
     options?: SubruleMethodOpts
   ): T
+  protected SUBRULE8<ARGS extends unknown[], T>(
+    ruleToCall: (idx: number, args: ARGS) => T,
+    options: SubruleMethodOpts & { ARGS: ARGS }
+  ): T
 
   /**
    * @see SUBRULE
@@ -1150,6 +1205,10 @@ export declare class EmbeddedActionsParser extends BaseParser {
   protected SUBRULE9<T>(
     ruleToCall: (idx: number) => T,
     options?: SubruleMethodOpts
+  ): T
+  protected SUBRULE9<ARGS extends unknown[], T>(
+    ruleToCall: (idx: number, args: ARGS) => T,
+    options: SubruleMethodOpts & { ARGS: ARGS }
   ): T
 }
 
@@ -1866,6 +1925,7 @@ export interface IOrAltWithGate<T> extends IOrAlt<T> {
 
 export interface ICstVisitor<IN, OUT> {
   visit(cstNode: CstNode | CstNode[], param?: IN): OUT
+
   validateVisitor(): void
 }
 
@@ -2010,6 +2070,7 @@ export interface IParserErrorMessageProvider {
     previous: IToken
     ruleName: string
   }): string
+
   /**
    * A Redundant Input Error happens when the parser has completed parsing but there
    * is still unprocessed input remaining.
@@ -2022,6 +2083,7 @@ export interface IParserErrorMessageProvider {
     firstRedundant: IToken
     ruleName: string
   }): string
+
   /**
    * A No Viable Alternative Error happens when the parser cannot detect any valid alternative in an alternation.
    * It corresponds to a failed {@link Parser.OR} in Chevrotain DSL terms.
@@ -2046,6 +2108,7 @@ export interface IParserErrorMessageProvider {
     customUserDescription: string
     ruleName: string
   }): string
+
   /**
    * An Early Exit Error happens when the parser cannot detect the first mandatory iteration of a repetition.
    * It corresponds to a failed {@link Parser.AT_LEAST_ONE} or {@link Parser.AT_LEAST_ONE_SEP} in Chevrotain DSL terms.
@@ -2237,8 +2300,7 @@ export declare function isRecognitionException(error: Error): boolean
  */
 export declare class MismatchedTokenException
   extends Error
-  implements IRecognitionException
-{
+  implements IRecognitionException {
   context: IRecognizerContext
   resyncedTokens: IToken[]
   token: IToken
@@ -2253,8 +2315,7 @@ export declare class MismatchedTokenException
  */
 export declare class NoViableAltException
   extends Error
-  implements IRecognitionException
-{
+  implements IRecognitionException {
   context: IRecognizerContext
   resyncedTokens: IToken[]
   token: IToken
@@ -2269,8 +2330,7 @@ export declare class NoViableAltException
  */
 export declare class NotAllInputParsedException
   extends Error
-  implements IRecognitionException
-{
+  implements IRecognitionException {
   context: IRecognizerContext
   resyncedTokens: IToken[]
   token: IToken
@@ -2284,8 +2344,7 @@ export declare class NotAllInputParsedException
  */
 export declare class EarlyExitException
   extends Error
-  implements IRecognitionException
-{
+  implements IRecognitionException {
   context: IRecognizerContext
   resyncedTokens: IToken[]
   token: IToken
@@ -2360,13 +2419,15 @@ export declare class NonTerminal implements IProductionWithOccurrence {
   label?: string
   referencedRule: Rule
   idx: number
+  definition: IProduction[]
+
   constructor(options: {
     nonTerminalName: string
     label?: string
     referencedRule?: Rule
     idx?: number
   })
-  definition: IProduction[]
+
   accept(visitor: IGASTVisitor): void
 }
 
@@ -2421,8 +2482,7 @@ export declare class RepetitionMandatory implements IProductionWithOccurrence {
  * The Grammar AST class representing a {@link Parser.AT_LEAST_ONE_SEP} call.
  */
 export declare class RepetitionMandatoryWithSeparator
-  implements IProductionWithOccurrence
-{
+  implements IProductionWithOccurrence {
   separator: TokenType
   idx: number
   definition: IProduction[]
@@ -2458,8 +2518,7 @@ export declare class Repetition implements IProductionWithOccurrence {
  * The Grammar AST class representing a {@link Parser.MANY_SEP} call.
  */
 export declare class RepetitionWithSeparator
-  implements IProductionWithOccurrence
-{
+  implements IProductionWithOccurrence {
   separator: TokenType
   idx: number
   definition: IProduction[]
@@ -2493,11 +2552,13 @@ export declare class Terminal implements IProductionWithOccurrence {
   terminalType: TokenType
   label?: string
   idx: number
+
   constructor(options: {
     terminalType: TokenType
     label?: string
     idx?: number
   })
+
   accept(visitor: IGASTVisitor): void
 }
 

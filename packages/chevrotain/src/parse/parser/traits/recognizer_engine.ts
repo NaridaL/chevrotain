@@ -671,6 +671,18 @@ export class RecognizerEngine {
     ruleToCall: (idx: number) => T,
     idx: number,
     options?: SubruleMethodOpts
+  )
+  subruleInternal<ARGS extends unknown[], T>(
+    this: MixedInParser,
+    ruleToCall: (idx: number, ...args: ARGS) => T,
+    idx: number,
+    options?: SubruleMethodOpts & { ARGS: ARGS }
+  )
+  subruleInternal<T>(
+    this: MixedInParser,
+    ruleToCall: (idx: number) => T,
+    idx: number,
+    options?: SubruleMethodOpts
   ) {
     let ruleResult
     try {
