@@ -1618,17 +1618,29 @@ interface ICustomPattern {
 export interface IToken {
   /** The textual representation of the Token as it appeared in the text. */
   image: string
-  /** Offset of the first character of the Token. */
+  /** Offset of the first character of the Token. 0-indexed. */
   startOffset: number
-  /** Line of the first character of the Token. */
+  /** Line of the first character of the Token. 1-indexed. */
   startLine?: number
-  /** Column of the first character of the Token. */
+  /**
+   * Column of the first character of the Token. 1-indexed.
+   *
+   * For token foo in the following line, startColumn will be 3 and endColumn will be 5.
+   * ```
+   * a foo
+   * 123456
+   * ```
+   */
   startColumn?: number
-  /** Offset of the last character of the Token. */
+  /**
+   * Offset of the last character of the Token. 0-indexed.
+   * Note that this points at the last character, not the end of the token, so the original image would be
+   * `input.substring(token.startOffset, token.endOffset + 1)`.
+   */
   endOffset?: number
-  /** Line of the last character of the Token. */
+  /** Line of the last character of the Token. 1-indexed. Will be the same as startLine for single-line tokens.*/
   endLine?: number
-  /** Column of the last character of the Token. */
+  /** Column of the last character of the Token. 1-indexed. See also startColumn. */
   endColumn?: number
   /** this marks if a Token does not really exist and has been inserted "artificially" during parsing in rule error recovery. */
   isInsertedInRecovery?: boolean
@@ -1874,6 +1886,7 @@ export interface IOrAltWithGate<T> extends IOrAlt<T> {
 
 export interface ICstVisitor<IN, OUT> {
   visit(cstNode: CstNode | CstNode[], param?: IN): OUT
+
   validateVisitor(): void
 }
 
@@ -2018,6 +2031,7 @@ export interface IParserErrorMessageProvider {
     previous: IToken
     ruleName: string
   }): string
+
   /**
    * A Redundant Input Error happens when the parser has completed parsing but there
    * is still unprocessed input remaining.
@@ -2030,6 +2044,7 @@ export interface IParserErrorMessageProvider {
     firstRedundant: IToken
     ruleName: string
   }): string
+
   /**
    * A No Viable Alternative Error happens when the parser cannot detect any valid alternative in an alternation.
    * It corresponds to a failed {@link Parser.OR} in Chevrotain DSL terms.
@@ -2054,6 +2069,7 @@ export interface IParserErrorMessageProvider {
     customUserDescription: string
     ruleName: string
   }): string
+
   /**
    * An Early Exit Error happens when the parser cannot detect the first mandatory iteration of a repetition.
    * It corresponds to a failed {@link Parser.AT_LEAST_ONE} or {@link Parser.AT_LEAST_ONE_SEP} in Chevrotain DSL terms.
@@ -2368,13 +2384,16 @@ export declare class NonTerminal implements IProductionWithOccurrence {
   label?: string
   referencedRule: Rule
   idx: number
+
   constructor(options: {
     nonTerminalName: string
     label?: string
     referencedRule?: Rule
     idx?: number
   })
+
   definition: IProduction[]
+
   accept(visitor: IGASTVisitor): void
 }
 
@@ -2501,11 +2520,13 @@ export declare class Terminal implements IProductionWithOccurrence {
   terminalType: TokenType
   label?: string
   idx: number
+
   constructor(options: {
     terminalType: TokenType
     label?: string
     idx?: number
   })
+
   accept(visitor: IGASTVisitor): void
 }
 
